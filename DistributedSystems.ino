@@ -2,7 +2,11 @@
 #include <WiFiS3.h>
 #include "arduino_secrets.h"
 
-#define CONNECTION_DELAY_MS 1000
+#define CONNECTION_DELAY_MS 1000u
+#define BUFFER_SIZE 10u
+#define TEMPERATUR_IDX 0u
+#define INSULATION_IDX 1u
+#define WIND_IDX 2u
 
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
@@ -15,6 +19,11 @@ static uint8_t const test_message_raw_len = sizeof(test_message_raw) / sizeof(ch
 static bool const retained = false;
 static int const publish_Qos = 1;
 static bool const dup = false;
+
+static float received_temperature[BUFFER_SIZE];
+static float received_insulation[BUFFER_SIZE];
+static float received_wind[BUFFER_SIZE];
+static uint8_t idx[] = {0u, 0u, 0u};
 
 static void 
 on_message_received(int message_size);
@@ -61,8 +70,26 @@ void setup() {
 
 void loop() 
 {
-  mqttClient.poll();
+  bool buffers_full = true;
+  for(int i = 0; i < 3; i++)
+  {
+    if(idx[i] < BUFFER_SIZE)
+    {
+      buffers_full = false;
+      break;
+    }
+  }
 
+  if(buffers_full)
+  {
+     Serial.println("Buffers full - restart");
+     idx[TEMPERATUR_IDX] = 0u;
+     idx[INSULATION_IDX] = 0u;
+     idx[WIND_IDX] = 0u;
+  }
+
+  mqttClient.poll();
+  
   // mqttClient.beginMessage(MEAN_DATA_PUBLISH, test_message_mean_len, retained, publish_Qos, dup);
   // mqttClient.print(test_message_mean);
   // mqttClient.endMessage();
@@ -109,17 +136,44 @@ on_message_received(int message_size)
   {
     case 't':
     {
-      snprintf(output, sizeof(output), "Temperature %s", buff_temp);
+      if(idx[TEMPERATUR_IDX] < BUFFER_SIZE)
+      {
+        received_temperature[idx[TEMPERATUR_IDX]] = atof(buff_temp);
+        idx[TEMPERATUR_IDX]++;
+        snprintf(output, sizeof(output), "Temperature %s", buff_temp);
+      }
+      else
+      {
+        snprintf(output, sizeof(output), "Temperature full");
+      }
       break;
     }
     case 'i':
     {
-      snprintf(output, sizeof(output), "Insulation %s", buff_temp);
+      if(idx[INSULATION_IDX] < BUFFER_SIZE)
+      {
+        received_insulation[idx[INSULATION_IDX]] = atof(buff_temp);
+        idx[INSULATION_IDX]++;
+        snprintf(output, sizeof(output), "Insulation %s", buff_temp);
+      }
+      else
+      {
+        snprintf(output, sizeof(output), "Insulation full");
+      }
       break;
     }
     case 'w':
     {
-      snprintf(output, sizeof(output), "Wind %s", buff_temp);
+      if(idx[WIND_IDX] < BUFFER_SIZE)
+      {
+        received_wind[idx[WIND_IDX]] = atof(buff_temp);
+        idx[WIND_IDX]++;
+        snprintf(output, sizeof(output), "Wind %s", buff_temp);
+      }
+      else
+      {
+        snprintf(output, sizeof(output), "Wind full");
+      }
       break;
     }
     default:
