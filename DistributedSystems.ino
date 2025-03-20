@@ -2,23 +2,22 @@
 #include <WiFiS3.h>
 #include "arduino_secrets.h"
 
+#define CONNECTION_DELAY_MS 1000
+
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
-static char const temp_message[] = "test_temperature";
-static char const insu_message[] = "test_insu";
-static char const wind_message[] = "test_wind";
-
-static uint8_t const temp_message_len = sizeof(temp_message) / sizeof(char);
-static uint8_t const insu_message_len = sizeof(insu_message) / sizeof(char);
-static uint8_t const wind_message_len = sizeof(wind_message) / sizeof(char);
+static char const test_message_mean[] = "test_msg_mean";
+static char const test_message_raw[] = "test_msg_raw";
+static uint8_t const test_message_mean_len = sizeof(test_message_mean) / sizeof(char);
+static uint8_t const test_message_raw_len = sizeof(test_message_raw) / sizeof(char);
 
 static bool const retained = false;
 static int const publish_Qos = 1;
 static bool const dup = false;
 
-static void
-subscribe_topics();
+static void 
+on_message_received(int message_size);
 
 void setup() {
   Serial.begin(9600);
@@ -28,7 +27,7 @@ void setup() {
   while (WiFi.begin(SSID, PASSWORD) != WL_CONNECTED) 
   {
     Serial.print(".");
-    delay(1000);
+    delay(CONNECTION_DELAY_MS);
   }
 
   Serial.println("You're connected to the network");
@@ -49,66 +48,84 @@ void setup() {
   {
     Serial.print("MQTT connection failed! Error code = ");
     Serial.println(mqttClient.connectError());
-    delay(5000);
+    delay(CONNECTION_DELAY_MS);
   }
 
   Serial.println("You're connected to the MQTT broker!");
   Serial.println();
 
-  subscribe_topics();
-
+  int const subscribe_Qos = 1;
+  mqttClient.subscribe(DATA_RECEIVE_TOPIC, subscribe_Qos);
+  mqttClient.onMessage(on_message_received);
 }
 
-void loop() {
+void loop() 
+{
   mqttClient.poll();
 
-  mqttClient.beginMessage(MEAN_TEMPERATURE_PUBLISH, temp_message_len, retained, publish_Qos, dup);
-  mqttClient.print(temp_message);
-  mqttClient.endMessage();
+  // mqttClient.beginMessage(MEAN_DATA_PUBLISH, test_message_mean_len, retained, publish_Qos, dup);
+  // mqttClient.print(test_message_mean);
+  // mqttClient.endMessage();
 
-  mqttClient.beginMessage(MEAN_INSOLATION_PUBLISH, insu_message_len, retained, publish_Qos, dup);
-  mqttClient.print(insu_message);
-  mqttClient.endMessage();
-
-  mqttClient.beginMessage(MEAN_WIND_PUBLISH, wind_message_len, retained, publish_Qos, dup);
-  mqttClient.print(wind_message);
-  mqttClient.endMessage();
+  // mqttClient.beginMessage(RAW_DATA_PUBLISH, test_message_raw_len, retained, publish_Qos, dup);
+  // mqttClient.print(test_message_raw);
+  // mqttClient.endMessage();
 }
 
-void on_temperature_message(int message_size)
+static void 
+on_message_received(int message_size)
 {
+  if (message_size <= 0) 
+  {
+    return;
+  }
+
+  char buff_temp[message_size];
+  uint32_t i = 0;
+
+  char data_indicator = '\0';
   while (mqttClient.available()) 
   {
-    Serial.print((char)mqttClient.read());
+    if(data_indicator == '\0')
+    {
+      data_indicator = (char)mqttClient.read();
+    }
+    
+    if(i < message_size - 1)
+    {
+      buff_temp[i] = (char)mqttClient.read();
+      i++;
+    }
+    else
+    {
+      break;
+    }
   }
-}
+  
+  buff_temp[i] = '\0';
 
-void on_insolation_message(int message_size)
-{
-  while (mqttClient.available()) 
+  char output[100];
+  switch(data_indicator)
   {
-    Serial.print((char)mqttClient.read());
+    case 't':
+    {
+      snprintf(output, sizeof(output), "Temperature %s", buff_temp);
+      break;
+    }
+    case 'i':
+    {
+      snprintf(output, sizeof(output), "Insulation %s", buff_temp);
+      break;
+    }
+    case 'w':
+    {
+      snprintf(output, sizeof(output), "Wind %s", buff_temp);
+      break;
+    }
+    default:
+    {
+      break;
+    }
   }
-}
-
-void on_wind_message(int message_size)
-{
-  while (mqttClient.available()) 
-  {
-    Serial.print((char)mqttClient.read());
-  }
-}
-
-static void
-subscribe_topics()
-{
-  int const subscribe_Qos = 1;
-  mqttClient.subscribe(TEMPERATURE_TOPIC, subscribe_Qos);
-  mqttClient.onMessage(on_temperature_message);
-
-  mqttClient.subscribe(INSOLATION_TOPIC, subscribe_Qos);
-  mqttClient.onMessage(on_insolation_message);
-
-  mqttClient.subscribe(WIND_TOPIC, subscribe_Qos);
-  mqttClient.onMessage(on_wind_message);
+  Serial.println(output);
 }
