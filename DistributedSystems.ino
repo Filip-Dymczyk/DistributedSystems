@@ -3,8 +3,8 @@
 #include "arduino_secrets.h"
 
 #define CONNECTION_DELAY_MS 1000u
-#define BUFFER_SIZE 10u
-#define TEMPERATUR_IDX 0u
+#define MAX_DATA_COUNT 100u
+#define TEMPERATURE_IDX 0u
 #define INSULATION_IDX 1u
 #define WIND_IDX 2u
 
@@ -20,10 +20,14 @@ static bool const retained = false;
 static int const publish_Qos = 1;
 static bool const dup = false;
 
-static float received_temperature[BUFFER_SIZE];
-static float received_insulation[BUFFER_SIZE];
-static float received_wind[BUFFER_SIZE];
-static uint8_t idx[] = {0u, 0u, 0u};
+static float received_temperature = 0.0f;
+static float received_insulation = 0.0f;
+static float received_wind  = 0.0f;
+static float sum_temperatures = 0.0f;
+static float sum_insulations = 0.0f;
+static float sum_winds  = 0.0f;
+
+static uint8_t data_count[] = {0u, 0u, 0u};
 
 static void 
 on_message_received(int message_size);
@@ -70,24 +74,6 @@ void setup() {
 
 void loop() 
 {
-  bool buffers_full = true;
-  for(int i = 0; i < 3; i++)
-  {
-    if(idx[i] < BUFFER_SIZE)
-    {
-      buffers_full = false;
-      break;
-    }
-  }
-
-  if(buffers_full)
-  {
-     Serial.println("Buffers full - restart");
-     idx[TEMPERATUR_IDX] = 0u;
-     idx[INSULATION_IDX] = 0u;
-     idx[WIND_IDX] = 0u;
-  }
-
   mqttClient.poll();
   
   // mqttClient.beginMessage(MEAN_DATA_PUBLISH, test_message_mean_len, retained, publish_Qos, dup);
@@ -136,43 +122,55 @@ on_message_received(int message_size)
   {
     case 't':
     {
-      if(idx[TEMPERATUR_IDX] < BUFFER_SIZE)
+      if(data_count[TEMPERATURE_IDX] < MAX_DATA_COUNT)
       {
-        received_temperature[idx[TEMPERATUR_IDX]] = atof(buff_temp);
-        idx[TEMPERATUR_IDX]++;
-        snprintf(output, sizeof(output), "Temperature %s", buff_temp);
+        received_temperature = atof(buff_temp);
+        sum_temperatures += received_temperature;
+        data_count[TEMPERATURE_IDX]++;
+        snprintf(output, sizeof(output), "Temperature: %f", received_temperature);
       }
       else
       {
-        snprintf(output, sizeof(output), "Temperature full");
+        float const temperature_mean = sum_temperatures / MAX_DATA_COUNT;
+        sum_temperatures = 0.0f;
+        data_count[TEMPERATURE_IDX] = 0u;
+        snprintf(output, sizeof(output), "Mean Temperature: %f", temperature_mean);
       }
       break;
     }
     case 'i':
     {
-      if(idx[INSULATION_IDX] < BUFFER_SIZE)
+      if(data_count[INSULATION_IDX] < MAX_DATA_COUNT)
       {
-        received_insulation[idx[INSULATION_IDX]] = atof(buff_temp);
-        idx[INSULATION_IDX]++;
-        snprintf(output, sizeof(output), "Insulation %s", buff_temp);
+        received_insulation = atof(buff_temp);
+        sum_insulations += received_insulation;
+        data_count[INSULATION_IDX]++;
+        snprintf(output, sizeof(output), "Insulation: %f", received_insulation);
       }
       else
       {
-        snprintf(output, sizeof(output), "Insulation full");
+        float const insulation_mean = sum_insulations / MAX_DATA_COUNT;
+        sum_insulations = 0.0f;
+        data_count[INSULATION_IDX] = 0u;
+        snprintf(output, sizeof(output), "Mean Insulation: %f", insulation_mean);
       }
       break;
     }
     case 'w':
     {
-      if(idx[WIND_IDX] < BUFFER_SIZE)
+      if(data_count[WIND_IDX] < MAX_DATA_COUNT)
       {
-        received_wind[idx[WIND_IDX]] = atof(buff_temp);
-        idx[WIND_IDX]++;
-        snprintf(output, sizeof(output), "Wind %s", buff_temp);
+        received_wind = atof(buff_temp);
+        sum_winds += received_wind;
+        data_count[WIND_IDX]++;
+        snprintf(output, sizeof(output), "Wind: %f", received_wind);
       }
       else
       {
-        snprintf(output, sizeof(output), "Wind full");
+        float const wind_mean = sum_winds / MAX_DATA_COUNT;
+        sum_winds = 0.0f;
+        data_count[WIND_IDX] = 0u;
+        snprintf(output, sizeof(output), "Mean Wind: %f", wind_mean);
       }
       break;
     }
