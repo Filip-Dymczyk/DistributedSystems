@@ -8,13 +8,8 @@
 #define INSULATION_IDX 1u
 #define WIND_IDX 2u
 
-WiFiClient wifiClient;
-MqttClient mqttClient(wifiClient);
-
-static char const test_message_mean[] = "test_msg_mean";
-static char const test_message_raw[] = "test_msg_raw";
-static uint8_t const test_message_mean_len = sizeof(test_message_mean) / sizeof(char);
-static uint8_t const test_message_raw_len = sizeof(test_message_raw) / sizeof(char);
+WiFiClient wifi_client {};
+MqttClient mqttClient(wifi_client);
 
 static bool const retained = false;
 static int const publish_Qos = 1;
@@ -32,18 +27,18 @@ static uint8_t data_count[] = {0u, 0u, 0u};
 static void 
 on_message_received(int message_size);
 
-void setup() {
+void setup() 
+{
   Serial.begin(9600);
 
-  Serial.print("Attempting to connect to WPA SSID: ");
-  Serial.println(SSID);
+  Serial.println("Attempting to connect to the Network...");
   while (WiFi.begin(SSID, PASSWORD) != WL_CONNECTED) 
   {
     Serial.print(".");
     delay(CONNECTION_DELAY_MS);
   }
 
-  Serial.println("You're connected to the network");
+  Serial.println("You're connected to the Network!");
   Serial.println();
 
   char const will_message[] = "Client unexpectedly disconnected!";
@@ -54,13 +49,13 @@ void setup() {
   mqttClient.print(will_message);
   mqttClient.endWill();
 
-  Serial.print("Attempting to connect to the MQTT broker: ");
-  Serial.println(BROKER);
+  Serial.println("Attempting to connect to the MQTT broker...");
 
   while(!mqttClient.connect(BROKER, PORT))
   {
     Serial.print("MQTT connection failed! Error code = ");
     Serial.println(mqttClient.connectError());
+    Serial.println("Retrying...");
     delay(CONNECTION_DELAY_MS);
   }
 
@@ -75,14 +70,6 @@ void setup() {
 void loop() 
 {
   mqttClient.poll();
-  
-  // mqttClient.beginMessage(MEAN_DATA_PUBLISH, test_message_mean_len, retained, publish_Qos, dup);
-  // mqttClient.print(test_message_mean);
-  // mqttClient.endMessage();
-
-  // mqttClient.beginMessage(RAW_DATA_PUBLISH, test_message_raw_len, retained, publish_Qos, dup);
-  // mqttClient.print(test_message_raw);
-  // mqttClient.endMessage();
 }
 
 static void 
@@ -128,6 +115,11 @@ on_message_received(int message_size)
         sum_temperatures += received_temperature;
         data_count[TEMPERATURE_IDX]++;
         snprintf(output, sizeof(output), "Temperature: %f", received_temperature);
+
+        std::string message = "t" + std::to_string(received_temperature);
+        mqttClient.beginMessage(DATA_PUBLISH, message.length(), retained, publish_Qos, dup);
+        mqttClient.print(message.c_str());
+        mqttClient.endMessage();
       }
       else
       {
@@ -135,6 +127,11 @@ on_message_received(int message_size)
         sum_temperatures = 0.0f;
         data_count[TEMPERATURE_IDX] = 0u;
         snprintf(output, sizeof(output), "Mean Temperature: %f", temperature_mean);
+        
+        std::string message = "tm" + std::to_string(temperature_mean);
+        mqttClient.beginMessage(DATA_PUBLISH, message.length(), retained, publish_Qos, dup);
+        mqttClient.print(message.c_str());
+        mqttClient.endMessage();
       }
       break;
     }
