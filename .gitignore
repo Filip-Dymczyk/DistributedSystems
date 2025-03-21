@@ -32,3 +32,4 @@
 *.app
 
 arduino_secrets.h
+*.vscode
