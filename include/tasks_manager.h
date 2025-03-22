@@ -12,10 +12,12 @@ public:
     run();
 
 private:
+    static DataManager m_data_manager;
     static WiFiClient m_wifi_client;
     static MqttClient m_mqtt_client;
-    static DataManager m_data_manager;
+
     static SemaphoreHandle_t m_parse_data_semaphore;
+    static SemaphoreHandle_t m_data_send_semaphore;
 
     static void
     connect_task(void* pvParameters);
