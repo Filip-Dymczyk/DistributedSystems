@@ -33,3 +33,7 @@
 
 arduino_secrets.h
 *.vscode
+*.json
+*.cache
+*.clang-format
+scripts
