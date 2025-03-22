@@ -1,23 +1,13 @@
 #pragma once
-#include <ArduinoMqttClient.h>
 #include <stdint.h>
 #include <cstddef>
-#include "MqttClient.h"
 
 class DataManager
 {
     static constexpr uint8_t MAX_DATA_COUNT = 100u;
 
 public:
-    DataManager(MqttClient& mqtt_client)
-        : m_mqtt_client(mqtt_client),
-          m_data_indicator('\0'),
-          m_data_count(),
-          m_received_data(),
-          m_raw_data(),
-          m_sum_data()
-    {
-    }
+    DataManager();
 
     void
     set_data_indicator(int mqtt_data);
@@ -33,6 +23,12 @@ public:
 
     void
     parse_data();
+
+    char const* const
+    get_message() const;
+
+    size_t
+    get_message_len() const;
 
 private:
     enum class IDX : uint8_t
@@ -56,13 +52,13 @@ private:
         float wind {};
     };
 
-    MqttClient& m_mqtt_client;
-
     char m_data_indicator;
     uint8_t m_data_count[3];
     char m_received_data[MAX_DATA_COUNT];
     Raw_Data m_raw_data;
     Sum_Data m_sum_data;
+    char m_message[MAX_DATA_COUNT];
+    size_t m_message_len;
 
     size_t
     idx_to_int(IDX idx);

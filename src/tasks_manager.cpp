@@ -4,16 +4,25 @@
 #define CONNECTION_DELAY_MS 1000u
 #define THREAD_STACK_SIZE 256
 
+DataManager TasksManager::m_data_manager {};
 WiFiClient TasksManager::m_wifi_client {};
 MqttClient TasksManager::m_mqtt_client {m_wifi_client};
-DataManager TasksManager::m_data_manager {m_mqtt_client};
+
 SemaphoreHandle_t TasksManager::m_parse_data_semaphore = nullptr;
+SemaphoreHandle_t TasksManager::m_data_send_semaphore  = nullptr;
 
 void
 TasksManager::run()
 {
     m_parse_data_semaphore = xSemaphoreCreateBinary();
     if(m_parse_data_semaphore == nullptr)
+    {
+        Serial.println("Failed to create semaphore!");
+        return;
+    }
+
+    m_data_send_semaphore = xSemaphoreCreateBinary();
+    if(m_data_send_semaphore == nullptr)
     {
         Serial.println("Failed to create semaphore!");
         return;
@@ -84,6 +93,7 @@ TasksManager::data_parse_task(void* pvParameters)
         if(xSemaphoreTake(m_parse_data_semaphore, portMAX_DELAY) == pdTRUE)
         {
             m_data_manager.parse_data();
+            xSemaphoreGive(m_data_send_semaphore);
         }
         vTaskDelay(mqtt_poll_delay);
     }
@@ -94,8 +104,18 @@ TasksManager::data_send_task(void* pvParameters)
 {
     Serial.println("Starting data sending...");
 
+    static bool const retained   = false;
+    static bool const dup        = false;
+    static int const publish_Qos = 1;
+
     for(;;)
     {
+        if(xSemaphoreTake(m_data_send_semaphore, portMAX_DELAY) == pdTRUE)
+        {
+            m_mqtt_client.beginMessage(DATA_PUBLISH, m_data_manager.get_message_len(), retained, publish_Qos, dup);
+            m_mqtt_client.print(m_data_manager.get_message());
+            m_mqtt_client.endMessage();
+        }
         vTaskDelay(mqtt_poll_delay);
     }
 }
