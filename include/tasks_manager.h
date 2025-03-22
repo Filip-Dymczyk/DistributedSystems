@@ -6,7 +6,8 @@
 
 class TasksManager
 {
-    static TickType_t const mqtt_poll_delay = 100 / portTICK_PERIOD_MS;  // Convert 100ms to ticks.
+    static constexpr uint16_t POLL_DELAY_MS = 1000u;
+    static TickType_t const mqtt_poll_delay = POLL_DELAY_MS / portTICK_PERIOD_MS;  // Convert ms to ticks.
 public:
     void
     run();

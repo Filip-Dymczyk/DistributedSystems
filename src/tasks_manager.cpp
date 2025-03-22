@@ -1,4 +1,5 @@
 #include "../include/tasks_manager.h"
+#include <cctype>
 #include "arduino_secrets.h"
 
 #define CONNECTION_DELAY_MS 1000u
@@ -128,28 +129,42 @@ TasksManager::on_message_received(int message_size)
         return;
     }
 
-    size_t idx = 0;
-
-    static const char init_indicator = '\0';
-    m_data_manager.set_data_indicator(init_indicator);
+    size_t region_idx    = 0u;
+    size_t values_idx    = 0u;
+    bool region_obtained = false;
 
     while(m_mqtt_client.available())
     {
-        if(m_data_manager.get_data_indicator() == '\0')
-        {
-            m_data_manager.set_data_indicator(m_mqtt_client.read());
-            continue;
-        }
-        bool const success = m_data_manager.receive_data(m_mqtt_client.read(), idx);
-        idx++;
+        char const mqtt_data = static_cast<char>(m_mqtt_client.read());
 
-        if(!success)
+        if(isdigit(mqtt_data) && !region_obtained)
         {
-            break;
+            bool const success = m_data_manager.receive_idx_data(mqtt_data, region_idx++);
+            if(!success)
+            {
+                return;
+            }
+        }
+        else
+        {
+            region_obtained = true;
+
+            bool const success = m_data_manager.receive_data(mqtt_data, values_idx++);
+
+            if(!success)
+            {
+                return;
+            }
         }
     }
 
-    bool const success = m_data_manager.set_data_terminator(idx);
+    bool success = m_data_manager.set_idx_data_terminator(region_idx);
+    if(!success)
+    {
+        return;
+    }
+
+    success = m_data_manager.set_data_terminator(values_idx);
     if(!success)
     {
         return;
