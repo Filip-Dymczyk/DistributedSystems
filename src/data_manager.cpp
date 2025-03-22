@@ -1,10 +1,10 @@
-#include "arduino_secrets.h"
 #include "../include/data_manager.h"
+#include "arduino_secrets.h"
 
 void
 DataManager::set_data_indicator(int mqtt_data)
 {
-    m_data_indicator =  static_cast<char>(mqtt_data);
+    m_data_indicator = static_cast<char>(mqtt_data);
 }
 
 char
@@ -38,10 +38,10 @@ DataManager::set_data_terminator(size_t idx)
 void
 DataManager::parse_data()
 {
-    static bool const retained              = false;
-    static bool const dup                   = false;
-    static int const publish_Qos            = 1;
-    
+    static bool const retained   = false;
+    static bool const dup        = false;
+    static int const publish_Qos = 1;
+
     char message[100];
     switch(m_data_indicator)
     {
@@ -50,7 +50,7 @@ DataManager::parse_data()
             if(m_data_count[idx_to_int(IDX::TEMPERATURE)] < MAX_DATA_COUNT)
             {
                 m_raw_data.temperature = strtof(m_received_data, nullptr);
-                m_sum_data.temperature  += m_raw_data.temperature;
+                m_sum_data.temperature += m_raw_data.temperature;
                 m_data_count[idx_to_int(IDX::TEMPERATURE)]++;
 
                 uint16_t const len = snprintf(message, sizeof(message), "t%f", m_raw_data.temperature);
@@ -60,9 +60,9 @@ DataManager::parse_data()
             }
             else
             {
-                float const temperature_mean =  m_sum_data.temperature / MAX_DATA_COUNT;
-                m_sum_data.temperature             = 0.0f;
-                m_data_count[idx_to_int(IDX::TEMPERATURE)]  = 0u;
+                float const temperature_mean               = m_sum_data.temperature / MAX_DATA_COUNT;
+                m_sum_data.temperature                     = 0.0f;
+                m_data_count[idx_to_int(IDX::TEMPERATURE)] = 0u;
 
                 uint16_t const len = snprintf(message, sizeof(message), "tm%f", temperature_mean);
                 m_mqtt_client.beginMessage(DATA_PUBLISH, len, retained, publish_Qos, dup);
@@ -81,9 +81,9 @@ DataManager::parse_data()
             }
             else
             {
-                float const insulation_mean = m_sum_data.insulation / MAX_DATA_COUNT;
-                m_sum_data.insulation             = 0.0f;
-                m_data_count[idx_to_int(IDX::INSULATION)]  = 0u;
+                float const insulation_mean               = m_sum_data.insulation / MAX_DATA_COUNT;
+                m_sum_data.insulation                     = 0.0f;
+                m_data_count[idx_to_int(IDX::INSULATION)] = 0u;
             }
             break;
         }
@@ -97,9 +97,9 @@ DataManager::parse_data()
             }
             else
             {
-                float const wind_mean = m_sum_data.wind / MAX_DATA_COUNT;
-                m_sum_data.wind             = 0.0f;
-                m_data_count[idx_to_int(IDX::WIND)]  = 0u;
+                float const wind_mean               = m_sum_data.wind / MAX_DATA_COUNT;
+                m_sum_data.wind                     = 0.0f;
+                m_data_count[idx_to_int(IDX::WIND)] = 0u;
             }
             break;
         }

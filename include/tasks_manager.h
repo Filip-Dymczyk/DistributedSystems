@@ -1,7 +1,7 @@
 #pragma once
+#include <ArduinoMqttClient.h>
 #include <Arduino_FreeRTOS.h>
 #include <WiFiS3.h>
-#include <ArduinoMqttClient.h>
 #include "data_manager.h"
 
 class TasksManager

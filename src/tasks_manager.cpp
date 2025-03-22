@@ -1,5 +1,5 @@
-#include "arduino_secrets.h"
 #include "../include/tasks_manager.h"
+#include "arduino_secrets.h"
 
 #define CONNECTION_DELAY_MS 1000u
 #define THREAD_STACK_SIZE 256
@@ -20,7 +20,7 @@ TasksManager::run()
     }
 
     xTaskCreate(connect_task, "WiFi Connect", THREAD_STACK_SIZE, nullptr, 1, nullptr);
-    
+
     Serial.println("Initialization complete!");
     vTaskStartScheduler();
 }
@@ -109,7 +109,7 @@ TasksManager::on_message_received(int message_size)
     }
 
     size_t idx = 0;
-    
+
     static const char init_indicator = '\0';
     m_data_manager.set_data_indicator(init_indicator);
 

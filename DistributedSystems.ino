@@ -7,7 +7,7 @@ void
 setup()
 {
     Serial.begin(9600);
-    tasks_manager.run();   
+    tasks_manager.run();
 }
 
 void

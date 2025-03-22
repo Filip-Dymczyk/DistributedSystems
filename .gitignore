@@ -36,3 +36,4 @@ arduino_secrets.h
 *.json
 *.cache
 *.clang-format
+scripts
