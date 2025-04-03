@@ -6,8 +6,8 @@
 
 class TasksManager
 {
-    static constexpr uint16_t POLL_DELAY_MS = 1000u;
-    static TickType_t const mqtt_poll_delay = POLL_DELAY_MS / portTICK_PERIOD_MS;  // Convert ms to ticks.
+    static constexpr uint16_t POLL_DELAY_MS = 100u;
+    static constexpr TickType_t mqtt_poll_delay = POLL_DELAY_MS / portTICK_PERIOD_MS;  // Convert ms to ticks.
 public:
     void
     run();
@@ -19,6 +19,7 @@ private:
 
     static SemaphoreHandle_t m_parse_data_semaphore;
     static SemaphoreHandle_t m_data_send_semaphore;
+    static SemaphoreHandle_t m_mqtt_client_mutex;
 
     static void
     connect_task(void* pvParameters);

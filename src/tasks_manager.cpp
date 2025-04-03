@@ -11,6 +11,7 @@ MqttClient TasksManager::m_mqtt_client {m_wifi_client};
 
 SemaphoreHandle_t TasksManager::m_parse_data_semaphore = nullptr;
 SemaphoreHandle_t TasksManager::m_data_send_semaphore  = nullptr;
+SemaphoreHandle_t TasksManager::m_mqtt_client_mutex  = nullptr;
 
 void
 TasksManager::run()
@@ -26,6 +27,13 @@ TasksManager::run()
     if(m_data_send_semaphore == nullptr)
     {
         Serial.println("Failed to create semaphore!");
+        return;
+    }
+
+    m_mqtt_client_mutex = xSemaphoreCreateMutex();
+    if(m_data_send_semaphore == nullptr)
+    {
+        Serial.println("Failed to create mutex!");
         return;
     }
 
@@ -79,7 +87,11 @@ TasksManager::mqtt_poll_task(void* pvParameters)
 
     for(;;)
     {
-        m_mqtt_client.poll();
+        if(xSemaphoreTake(m_mqtt_client_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            m_mqtt_client.poll();
+            xSemaphoreGive(m_mqtt_client_mutex);
+        }
         vTaskDelay(mqtt_poll_delay);
     }
 }
@@ -113,9 +125,13 @@ TasksManager::data_send_task(void* pvParameters)
     {
         if(xSemaphoreTake(m_data_send_semaphore, portMAX_DELAY) == pdTRUE)
         {
-            m_mqtt_client.beginMessage(DATA_PUBLISH, m_data_manager.get_message_len(), retained, publish_Qos, dup);
-            m_mqtt_client.print(m_data_manager.get_message());
-            m_mqtt_client.endMessage();
+            if(xSemaphoreTake(m_mqtt_client_mutex, portMAX_DELAY) == pdTRUE)
+            {
+                m_mqtt_client.beginMessage(DATA_PUBLISH, m_data_manager.get_message_len(), retained, publish_Qos, dup);
+                m_mqtt_client.print(m_data_manager.get_message());
+                m_mqtt_client.endMessage();
+                xSemaphoreGive(m_mqtt_client_mutex);
+            }  
         }
         vTaskDelay(mqtt_poll_delay);
     }
@@ -169,6 +185,5 @@ TasksManager::on_message_received(int message_size)
     {
         return;
     }
-
     xSemaphoreGive(m_parse_data_semaphore);  // Notify that parsing can happen.
 }
