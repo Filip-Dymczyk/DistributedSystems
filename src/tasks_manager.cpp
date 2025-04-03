@@ -1,5 +1,6 @@
 #include "../include/tasks_manager.h"
 #include <cctype>
+#include "api/Common.h"
 #include "arduino_secrets.h"
 
 #define CONNECTION_DELAY_MS 1000u
@@ -77,6 +78,7 @@ TasksManager::connect_task(void* pvParameters)
     xTaskCreate(mqtt_poll_task, "MQTT Polling", THREAD_STACK_SIZE, nullptr, 1, nullptr);
     xTaskCreate(data_parse_task, "Data Parsing", THREAD_STACK_SIZE, nullptr, 1, nullptr);
     xTaskCreate(data_send_task, "Data Sending", THREAD_STACK_SIZE, nullptr, 1, nullptr);
+    xTaskCreate(check_connections_task, "Connections Check", THREAD_STACK_SIZE, nullptr, 1, nullptr);
     vTaskDelete(NULL);
 }
 
@@ -153,7 +155,7 @@ TasksManager::on_message_received(int message_size)
     {
         char const mqtt_data = static_cast<char>(m_mqtt_client.read());
 
-        if(isdigit(mqtt_data) && !region_obtained)
+        if(isDigit(mqtt_data) && !region_obtained)
         {
             bool const success = m_data_manager.receive_idx_data(mqtt_data, region_idx++);
             if(!success)
@@ -186,4 +188,19 @@ TasksManager::on_message_received(int message_size)
         return;
     }
     xSemaphoreGive(m_parse_data_semaphore);  // Notify that parsing can happen.
+}
+
+void
+TasksManager::check_connections_task(void* pvParameters)
+{
+    Serial.println("Starting connections check...");
+
+    for(;;)
+    {    
+        if(WiFi.status() != WL_CONNECTED || !m_mqtt_client.connected())
+        {
+            NVIC_SystemReset();
+        }
+        vTaskDelay(connection_alive_delay);
+    }
 }

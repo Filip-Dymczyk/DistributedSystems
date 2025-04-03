@@ -6,8 +6,8 @@
 
 class TasksManager
 {
-    static constexpr uint16_t POLL_DELAY_MS = 100u;
-    static constexpr TickType_t mqtt_poll_delay = POLL_DELAY_MS / portTICK_PERIOD_MS;  // Convert ms to ticks.
+    static constexpr TickType_t mqtt_poll_delay = pdMS_TO_TICKS(100u); // Convert ms to ticks.
+    static constexpr TickType_t connection_alive_delay = pdMS_TO_TICKS(10u * 60u * 1000u); // Convert ms to ticks.
 public:
     void
     run();
@@ -35,4 +35,7 @@ private:
 
     static void
     on_message_received(int message_size);
+
+    static void
+    check_connections_task(void* pvParameters);
 };
