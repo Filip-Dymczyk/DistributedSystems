@@ -12,7 +12,7 @@ MqttClient TasksManager::m_mqtt_client {m_wifi_client};
 
 SemaphoreHandle_t TasksManager::m_parse_data_semaphore = nullptr;
 SemaphoreHandle_t TasksManager::m_data_send_semaphore  = nullptr;
-SemaphoreHandle_t TasksManager::m_mqtt_client_mutex  = nullptr;
+SemaphoreHandle_t TasksManager::m_mqtt_client_mutex    = nullptr;
 
 void
 TasksManager::run()
@@ -119,10 +119,6 @@ TasksManager::data_send_task(void* pvParameters)
 {
     Serial.println("Starting data sending...");
 
-    static bool const retained   = false;
-    static bool const dup        = false;
-    static int const publish_Qos = 1;
-
     for(;;)
     {
         if(xSemaphoreTake(m_data_send_semaphore, portMAX_DELAY) == pdTRUE)
@@ -133,7 +129,7 @@ TasksManager::data_send_task(void* pvParameters)
                 m_mqtt_client.print(m_data_manager.get_message());
                 m_mqtt_client.endMessage();
                 xSemaphoreGive(m_mqtt_client_mutex);
-            }  
+            }
         }
         vTaskDelay(mqtt_poll_delay);
     }
@@ -196,11 +192,27 @@ TasksManager::check_connections_task(void* pvParameters)
     Serial.println("Starting connections check...");
 
     for(;;)
-    {    
+    {
         if(WiFi.status() != WL_CONNECTED || !m_mqtt_client.connected())
         {
             NVIC_SystemReset();
         }
+        if(xSemaphoreTake(m_mqtt_client_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            send_alive_msg();
+            xSemaphoreGive(m_mqtt_client_mutex);
+        }
         vTaskDelay(connection_alive_delay);
     }
+}
+
+void
+TasksManager::send_alive_msg()
+{
+    static char const alive_msg[] = "Connections alive\0";
+    static size_t alive_msg_size  = strlen(alive_msg);
+
+    m_mqtt_client.beginMessage(CONNECTION_ALIVE, alive_msg_size, retained, publish_Qos, dup);
+    m_mqtt_client.print(alive_msg);
+    m_mqtt_client.endMessage();
 }

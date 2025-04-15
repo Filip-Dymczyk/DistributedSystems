@@ -118,13 +118,14 @@ DataManager::parse_data()
     }
     else
     {
-        m_data_count[region_idx]++; // Protect against calculating next means from 9 elements instead of 10 (as int the beginning).
+        m_data_count[region_idx]++;  // Protect against calculating next means from 9 elements instead of 10 (as in the
+                                     // beginning).
     }
 
     m_message_len = snprintf(
         m_message, sizeof(m_message), "%d_%.2f_%.2f_%.2f_%.2f_%.2f_%.2f", region_idx,
         m_raw_data[region_idx].temperature, m_raw_data[region_idx].insulation, m_raw_data[region_idx].wind,
-        temperature_mean, insulation_mean, wind_mean);  
+        temperature_mean, insulation_mean, wind_mean);
 }
 
 char const* const

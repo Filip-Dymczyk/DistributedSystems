@@ -6,8 +6,8 @@
 
 class TasksManager
 {
-    static constexpr TickType_t mqtt_poll_delay = pdMS_TO_TICKS(100u); // Convert ms to ticks.
-    static constexpr TickType_t connection_alive_delay = pdMS_TO_TICKS(10u * 60u * 1000u); // Convert ms to ticks.
+    static constexpr TickType_t mqtt_poll_delay        = pdMS_TO_TICKS(100u);               // Convert ms to ticks.
+    static constexpr TickType_t connection_alive_delay = pdMS_TO_TICKS(45u * 60u * 1000u);  // Convert ms to ticks.
 public:
     void
     run();
@@ -20,6 +20,10 @@ private:
     static SemaphoreHandle_t m_parse_data_semaphore;
     static SemaphoreHandle_t m_data_send_semaphore;
     static SemaphoreHandle_t m_mqtt_client_mutex;
+
+    static bool const retained   = false;
+    static bool const dup        = false;
+    static int const publish_Qos = 1;
 
     static void
     connect_task(void* pvParameters);
@@ -38,4 +42,7 @@ private:
 
     static void
     check_connections_task(void* pvParameters);
+
+    static void
+    send_alive_msg();
 };
