@@ -4,7 +4,7 @@
 
 class DataManager
 {
-    static constexpr uint8_t MEAN_COUNT     = 10u;
+    static constexpr uint8_t MEAN_COUNT     = 5u;
     static constexpr uint8_t MAX_DATA_COUNT = 100u;
     static constexpr uint8_t REGIONS_COUNT  = 126u;
 
@@ -31,6 +31,9 @@ public:
 
     size_t
     get_message_len() const;
+
+    uint8_t
+    get_debug_counter() const;
 
 private:
     struct Raw_Data

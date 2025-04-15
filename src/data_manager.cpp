@@ -1,4 +1,5 @@
 #include "../include/data_manager.h"
+#include <string.h>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -6,6 +7,7 @@
 DataManager::DataManager()
     : m_idx_data(), m_received_data(), m_data_count(), m_raw_data(), m_sum_data(), m_message(), m_message_len()
 {
+    memset(m_data_count, 1u, sizeof(m_data_count));
 }
 
 bool
@@ -65,7 +67,9 @@ DataManager::parse_data()
         if(!isdigit(m_received_data[idx]))
         {
             char const data_indicator = m_received_data[idx++];
-            float const value         = strtof(&m_received_data[idx], nullptr);
+            char* endptr              = nullptr;
+            float const value         = strtof(&m_received_data[idx], &endptr);
+            idx                       = endptr - m_received_data;
 
             switch(data_indicator)
             {
@@ -104,7 +108,7 @@ DataManager::parse_data()
     float insulation_mean  = -1.0f;
     float wind_mean        = -1.0f;
 
-    if(m_data_count[region_idx] == MEAN_COUNT - 1u)
+    if(m_data_count[region_idx] == MEAN_COUNT)
     {
         temperature_mean = m_sum_data[region_idx].temperature / MEAN_COUNT;
         insulation_mean  = m_sum_data[region_idx].insulation / MEAN_COUNT;
@@ -116,11 +120,7 @@ DataManager::parse_data()
 
         m_data_count[region_idx] = 0u;
     }
-    else
-    {
-        m_data_count[region_idx]++;  // Protect against calculating next means from 9 elements instead of 10 (as in the
-                                     // beginning).
-    }
+    m_data_count[region_idx]++;  // Start from one even after resetting.
 
     m_message_len = snprintf(
         m_message, sizeof(m_message), "%d_%.2f_%.2f_%.2f_%.2f_%.2f_%.2f", region_idx,
@@ -138,4 +138,10 @@ size_t
 DataManager::get_message_len() const
 {
     return m_message_len;
+}
+
+uint8_t
+DataManager::get_debug_counter() const
+{
+    return m_data_count[0u];
 }
