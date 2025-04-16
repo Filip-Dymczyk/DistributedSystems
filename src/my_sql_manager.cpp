@@ -71,6 +71,5 @@ MySQLManager::insert_data(int counter)
     {
         Serial.println("Inserting error!");
     }
-    m_con.close();
     delete cur;
 }
