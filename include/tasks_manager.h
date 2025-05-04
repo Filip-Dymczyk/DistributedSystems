@@ -7,7 +7,7 @@
 
 class TasksManager
 {
-    static constexpr TickType_t mqtt_poll_delay        = pdMS_TO_TICKS(100u);              // Convert ms to ticks.
+    static constexpr TickType_t mqtt_poll_delay        = pdMS_TO_TICKS(100u);               // Convert ms to ticks.
     static constexpr TickType_t connection_alive_delay = pdMS_TO_TICKS(10u * 60u * 1000u);  // Convert ms to ticks.
 public:
     static void

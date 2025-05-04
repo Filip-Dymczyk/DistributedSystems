@@ -198,7 +198,7 @@ TasksManager::check_connections_task(void* pvParameters)
                 reset_connections();
 
                 xTaskCreate(
-                       recovery_task, "Connection Recovery Task", THREAD_STACK_SIZE, &recovery_started, 1, nullptr);
+                    recovery_task, "Connection Recovery Task", THREAD_STACK_SIZE, &recovery_started, 1, nullptr);
             }
         }
         else
@@ -302,7 +302,7 @@ TasksManager::recovery_task(void* pvParameters)
 {
     Serial.println("In recovery...");
     bool* recovery_started = static_cast<bool*>(pvParameters);
-    
+
     // Closing check_connections_task here since when done before it could cause undefined behavior.
     if(m_check_connections_task_handle != nullptr)
     {
@@ -310,7 +310,7 @@ TasksManager::recovery_task(void* pvParameters)
     }
 
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    
+
     if(m_check_connections_task_handle != nullptr)
     {
         vTaskDelete(m_check_connections_task_handle);
